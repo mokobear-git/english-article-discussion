@@ -16,13 +16,13 @@ function scriptFor(params) {
   const meta = (o) => `\n<<<META ${JSON.stringify(o)}>>>`;
   if (text.includes("タスクB")) {
     return (
-      "設問は2つ。設問1。What was the primary outcome? 主要評価項目は何か。\nステップ1。方法の節で、主要評価項目を述べている語はどれか。\nA. primary endpoint\nB. secondary analysis\nC. baseline characteristics" +
-      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", choices: ["A. primary endpoint", "B. secondary analysis", "C. baseline characteristics"] })
+      "設問は2つ。設問1。What was the primary outcome? 主要評価項目は何か。\nステップ1。この設問が求めているのは次のどれか。\nA. 研究が最も重視した評価の指標\nB. 研究対象者の特徴\nC. 統計解析の方法" +
+      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", choices: ["A. 研究が最も重視した評価の指標", "B. 研究対象者の特徴", "C. 統計解析の方法"] })
     );
   }
   if (turns === 1) {
     return (
-      "正解。Methods に the primary endpoint was ... とある。まとめると、主要評価項目は全死亡である。こうですか?" +
+      "正解。研究の中心となる指標を答える設問。方法の節に記載があり、全死亡と定められている。まとめると、主要評価項目は全死亡である。こうですか?" +
       meta({ q: 1, total_q: 2, phase: "confirm", expect: "ja", choices: ["OK", "修正したい"] })
     );
   }
