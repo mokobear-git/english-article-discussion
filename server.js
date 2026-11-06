@@ -8,6 +8,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   SYSTEM_PROMPT,
   TRANSLATE_INSTRUCTION,
+  SUMMARY_INSTRUCTION,
   TRANSLATE_CONTINUE,
   START_INSTRUCTION,
 } from "./prompts.js";
@@ -243,6 +244,7 @@ async function createSession(body) {
     createdAt: new Date().toISOString(),
     title: body.title || docs.find((d) => d.role === "paper")?.name || "論文",
     docs,
+    translateMode: MODES.has(body.translateMode) ? body.translateMode : "full",
     translation: "",
     translationDone: false,
     history: [],
@@ -266,6 +268,7 @@ function publicState(s) {
     title: s.title,
     translation: s.translation,
     translationDone: s.translationDone,
+    translateMode: s.translateMode || "full",
     started: s.history.length > 0,
     transcript,
     record: s.record,
@@ -273,24 +276,61 @@ function publicState(s) {
   };
 }
 
-async function handleTranslate(s, req, res) {
+const MODES = new Set(["full", "summary", "none"]);
+
+async function handleTranslate(s, body, req, res) {
   const send = sseStart(res);
+  // Requests can arrive out of order when the user switches modes quickly: newest wins.
+  const seq = Number(body.seq) || 0;
+  if (seq && seq < (s.trSeq || 0)) {
+    send("done", { stopReason: "stale" });
+    return res.end();
+  }
+  if (seq) s.trSeq = seq;
+  const mode = MODES.has(body.mode) ? body.mode : s.translateMode || "full";
+  if (mode !== (s.translateMode || "full")) {
+    s.trAbort?.();
+    s.trGen = (s.trGen || 0) + 1;
+    s.translateMode = mode;
+    s.translationDone = false;
+    s.translation = "";
+  }
+  s.translateMode ||= "full";
+  if (s.translateMode === "none") {
+    s.translation = "";
+    s.translationDone = true;
+    await saveSession(s);
+    send("done", { stopReason: "end_turn" });
+    return res.end();
+  }
   if (s.translationDone) {
     send("delta", { text: s.translation });
     send("done", { stopReason: "end_turn" });
     return res.end();
   }
+  // Only the newest translation request may write (mode switches abort the old one).
+  s.trAbort?.();
+  const gen = (s.trGen = (s.trGen || 0) + 1);
+  const current = () => s.trGen === gen;
   const signalRef = { aborted: false };
+  const abortMine = () => {
+    signalRef.aborted = true;
+    signalRef.abort?.();
+  };
+  s.trAbort = abortMine;
   res.on("close", () => {
-    if (!res.writableFinished) {
-      signalRef.aborted = true;
-      signalRef.abort?.();
-    }
+    if (!res.writableFinished) abortMine();
   });
 
   s.translation = "";
   const messages = [
-    { role: "user", content: [...docBlocks(s), { type: "text", text: TRANSLATE_INSTRUCTION }] },
+    {
+      role: "user",
+      content: [
+        ...docBlocks(s),
+        { type: "text", text: s.translateMode === "summary" ? SUMMARY_INSTRUCTION : TRANSLATE_INSTRUCTION },
+      ],
+    },
   ];
   try {
     for (let round = 0; round < MAX_TRANSLATE_ROUNDS; round++) {
@@ -300,11 +340,13 @@ async function handleTranslate(s, req, res) {
           signalRef,
           onThinking: () => send("thinking", {}),
           onText: (t) => {
+            if (!current()) return;
             s.translation += t;
             send("delta", { text: t });
           },
         },
       );
+      if (!current()) break;
       if (result.stopReason === "refusal") {
         send("error", { message: "モデルが応答を拒否した(refusal)。" });
         break;
@@ -322,6 +364,7 @@ async function handleTranslate(s, req, res) {
   } catch (err) {
     if (!signalRef.aborted) send("error", { message: errorMessage(err) });
   } finally {
+    if (s.trAbort === abortMine) s.trAbort = null;
     await saveSession(s);
     res.end();
   }
@@ -502,7 +545,7 @@ const server = http.createServer(async (req, res) => {
       const s = await loadSession(parts[2]);
       if (!s) return json(res, 404, { error: "session not found" });
       if (req.method === "GET" && parts.length === 3) return json(res, 200, publicState(s));
-      if (req.method === "POST" && parts[3] === "translate") return handleTranslate(s, req, res);
+      if (req.method === "POST" && parts[3] === "translate") return handleTranslate(s, await readJson(req), req, res);
       if (req.method === "POST" && parts[3] === "turn") return handleTurn(s, await readJson(req), req, res);
     }
     json(res, 404, { error: "not found" });

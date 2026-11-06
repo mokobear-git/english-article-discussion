@@ -36,6 +36,7 @@ const state = {
   sessionId: null,
   translation: "",
   translationDone: false,
+  mode: "full",
   started: false,
   startTurn: null,
   turn: null,
@@ -670,6 +671,7 @@ function submitUser(text, { fromVoice = false } = {}) {
 
 function setComposeEnabled(on) {
   $("#input").disabled = !on;
+  $("#input").placeholder = on ? "入力して Enter(音声も可)" : "「設問へ進む」を押すと入力できる";
   $("#compose button").disabled = !on;
   $("#btn-hint").disabled = !on;
 }
@@ -682,7 +684,11 @@ function renderTranslation() {
   requestAnimationFrame(() => {
     trRaf = false;
     const el = $("#panel-translation");
-    el.innerHTML = renderMarkdown(state.translation) || `<p class="muted">翻訳を準備中…</p>`;
+    if (state.mode === "none") {
+      el.innerHTML = `<p class="muted">訳文・要約は表示しない設定。上の「全文訳」「要約」で後から表示できる。「設問へ進む」で始める。</p>`;
+      return;
+    }
+    el.innerHTML = renderMarkdown(state.translation) || `<p class="muted">${state.mode === "summary" ? "要約" : "翻訳"}を準備中…</p>`;
     if (!state.translationDone) el.lastElementChild?.classList.add("cursor");
   });
 }
@@ -690,37 +696,66 @@ function maybePrefetch() {
   // Start the first tutoring turn in the background so it is ready when the user moves on.
   if (!state.started && !state.startTurn) state.startTurn = beginTurn({ start: true }, { revealed: false });
 }
-async function runTranslation() {
+const FALLBACK_NOTE = "全文訳の代わりに要約";
+function translationLabel(phase) {
+  const word = state.mode === "summary" ? "要約" : "翻訳";
+  if (phase === "busy") return `${word}中…`;
+  if (phase === "prep") return `${word}準備中…`;
+  if (phase === "incomplete") return `${word}が途中で終了`;
+  if (state.mode === "none") return "";
+  if (state.mode === "full" && state.translation.slice(0, 80).includes(FALLBACK_NOTE)) return "全文訳できないため要約を表示";
+  return `${word}完了`;
+}
+function setModeSeg() {
+  $$("#mode-seg button").forEach((b) => b.classList.toggle("on", b.dataset.mode === state.mode));
+}
+let trCtrl = null;
+let trSeq = 0;
+async function runTranslation(mode) {
+  trSeq = Math.max(Date.now(), trSeq + 1);
+  const seq = trSeq;
+  if (mode) state.mode = mode;
+  setModeSeg();
+  trCtrl?.abort();
+  const ctrl = (trCtrl = new AbortController());
   const st = $("#translation-state");
-  st.textContent = "翻訳中…";
+  st.textContent = state.mode === "none" ? "" : translationLabel("busy");
   state.translation = "";
+  state.translationDone = false;
   renderTranslation();
   let first = true;
   try {
-    await postSSE(`/api/session/${state.sessionId}/translate`, {}, {
-      thinking() {
-        st.textContent = "翻訳準備中…";
+    await postSSE(
+      `/api/session/${state.sessionId}/translate`,
+      { mode: state.mode, seq },
+      {
+        thinking() {
+          st.textContent = translationLabel("prep");
+        },
+        delta({ text }) {
+          state.translation += text;
+          if (first) {
+            first = false;
+            st.textContent = translationLabel("busy");
+            maybePrefetch();
+          }
+          renderTranslation();
+        },
+        done({ stopReason }) {
+          state.translationDone = stopReason === "end_turn";
+          st.textContent = translationLabel(state.translationDone ? "done" : "incomplete");
+        },
+        error(e) {
+          st.textContent = `エラー: ${e.message}`;
+        },
       },
-      delta({ text }) {
-        state.translation += text;
-        if (first) {
-          first = false;
-          st.textContent = "翻訳中…";
-          maybePrefetch();
-        }
-        renderTranslation();
-      },
-      done({ stopReason }) {
-        state.translationDone = stopReason === "end_turn";
-        st.textContent = state.translationDone ? "翻訳完了" : "翻訳が途中で終了";
-      },
-      error(e) {
-        st.textContent = `翻訳エラー: ${e.message}`;
-      },
-    });
+      ctrl.signal,
+    );
   } catch (err) {
-    st.textContent = `翻訳エラー: ${err.message}`;
+    if (ctrl.signal.aborted) return;
+    st.textContent = `エラー: ${err.message}`;
   }
+  if (trCtrl !== ctrl) return;
   renderTranslation();
   maybePrefetch();
 }
@@ -740,7 +775,8 @@ function setTab(tab) {
 function setLeft(which) {
   $("#panel-translation").hidden = which !== "translation";
   $("#panel-record").hidden = which !== "record";
-  $$(".pane-head .seg button").forEach((b) => b.classList.toggle("on", b.dataset.left === which));
+  $$(".pane-head .seg.leftsel button").forEach((b) => b.classList.toggle("on", b.dataset.left === which));
+  $("#mode-seg").hidden = which !== "translation";
 }
 
 async function restore(id) {
@@ -750,6 +786,8 @@ async function restore(id) {
   state.sessionId = s.id;
   state.translation = s.translation || "";
   state.translationDone = s.translationDone;
+  state.mode = s.translateMode || "full";
+  setModeSeg();
   state.record = s.record || {};
   state.started = s.started;
   for (const m of s.transcript) {
@@ -765,7 +803,7 @@ async function restore(id) {
   renderRecord();
   showStudy();
   if (state.translationDone) {
-    $("#translation-state").textContent = "翻訳完了";
+    $("#translation-state").textContent = translationLabel("done");
     renderTranslation();
     maybePrefetch();
   } else runTranslation();
@@ -840,7 +878,8 @@ function setupDrop(role) {
 }
 
 async function startNew() {
-  const body = { paper: [...state.files.paper], questions: [...state.files.questions] };
+  const mode = document.querySelector('input[name="tmode"]:checked')?.value || "full";
+  const body = { paper: [...state.files.paper], questions: [...state.files.questions], translateMode: mode };
   const tp = $("#text-paper").value.trim();
   const tq = $("#text-questions").value.trim();
   if (tp) body.paper.push({ kind: "text", name: "貼り付け本文", text: tp });
@@ -868,11 +907,11 @@ async function startNew() {
     applyMetaUI(null);
     renderRecord();
     showStudy();
-    runTranslation();
+    runTranslation(mode);
   } catch (e) {
     alert(`開始できない: ${e.message}`);
     btn.disabled = false;
-    btn.textContent = "開始(訳文を表示)";
+    btn.textContent = "開始";
   }
 }
 
@@ -927,7 +966,14 @@ function bind() {
   $("#btn-go").onclick = go;
   $("#btn-go2").onclick = go;
   $$("#tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
-  $$(".pane-head .seg button").forEach((b) => (b.onclick = () => setLeft(b.dataset.left)));
+  $$(".pane-head .seg.leftsel button").forEach((b) => (b.onclick = () => setLeft(b.dataset.left)));
+  $$("#mode-seg button").forEach(
+    (b) =>
+      (b.onclick = () => {
+        if (b.dataset.mode === state.mode && state.translation) return;
+        runTranslation(b.dataset.mode);
+      }),
+  );
   $$("#lang-seg button").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
   $("#btn-mic").onclick = () => {
     if (!listener.supported) return alert("このブラウザは音声認識に非対応。Chrome / Edge / Safari を推奨。");
