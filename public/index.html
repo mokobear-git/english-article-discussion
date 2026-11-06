@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>論文ディスカッション</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-view="setup" data-tab="chat">
+  <header class="topbar">
+    <h1>論文ディスカッション</h1>
+    <div class="status" id="status"></div>
+    <button class="ghost" id="btn-settings" aria-label="設定">設定</button>
+    <button class="ghost" id="btn-new">新規</button>
+  </header>
+
+  <!-- ===== Setup ===== -->
+  <main id="setup" class="setup">
+    <section class="card">
+      <h2>1. 論文</h2>
+      <p class="muted">PDF・テキスト・画像。複数可。または本文を貼り付け。</p>
+      <label class="drop" data-role="paper">
+        <input type="file" id="file-paper" multiple accept=".pdf,.txt,.md,text/plain,application/pdf,image/*">
+        <span>ファイルを選択 / ドロップ</span>
+      </label>
+      <ul class="filelist" id="list-paper"></ul>
+      <textarea id="text-paper" rows="4" placeholder="本文を貼り付け(任意)"></textarea>
+    </section>
+    <section class="card">
+      <h2>2. 設問</h2>
+      <p class="muted">PDF・テキスト・画像。または貼り付け。</p>
+      <label class="drop" data-role="questions">
+        <input type="file" id="file-questions" multiple accept=".pdf,.txt,.md,text/plain,application/pdf,image/*">
+        <span>ファイルを選択 / ドロップ</span>
+      </label>
+      <ul class="filelist" id="list-questions"></ul>
+      <textarea id="text-questions" rows="4" placeholder="設問を貼り付け(任意)"></textarea>
+    </section>
+    <button class="primary big" id="btn-start">開始(訳文を表示)</button>
+    <p class="muted small" id="env-note"></p>
+  </main>
+
+  <!-- ===== Study ===== -->
+  <nav class="tabs" id="tabs">
+    <button data-tab="translation">訳文</button>
+    <button data-tab="chat">対話</button>
+    <button data-tab="record">成果</button>
+  </nav>
+
+  <main id="study" class="study">
+    <section class="pane left">
+      <div class="pane-head">
+        <div class="seg">
+          <button data-left="translation" class="on">訳文</button>
+          <button data-left="record">成果</button>
+        </div>
+        <span class="muted small" id="translation-state"></span>
+      </div>
+      <article id="panel-translation" class="panel prose"></article>
+      <article id="panel-record" class="panel prose" hidden>
+        <div id="record"></div>
+        <button class="ghost" id="btn-export">Markdownで保存</button>
+      </article>
+    </section>
+
+    <section class="pane chat" id="panel-chat">
+      <div class="progress" id="progress"></div>
+      <div class="log" id="log">
+        <div class="gate" id="gate">
+          <p>訳文を読み終えたら、設問へ。</p>
+          <button class="primary" id="btn-go">設問へ進む</button>
+        </div>
+      </div>
+
+      <div class="target" id="target" hidden>
+        <div class="target-label">英訳する文 <span id="target-progress"></span></div>
+        <div class="target-text" id="target-text"></div>
+      </div>
+
+      <div class="choices" id="choices"></div>
+
+      <div class="dock">
+        <div class="live" id="live" aria-live="polite"></div>
+        <div class="controls">
+          <button class="mic" id="btn-mic" aria-pressed="false" title="会話モード">
+            <span class="dot"></span><span id="mic-label">会話モード</span>
+          </button>
+          <div class="seg lang" id="lang-seg">
+            <button data-lang="ja" class="on">日本語</button>
+            <button data-lang="en">English</button>
+          </div>
+          <button class="ghost" id="btn-hint">ヒント</button>
+          <button class="ghost" id="btn-hush" title="読み上げ停止">停止</button>
+        </div>
+        <form class="compose" id="compose">
+          <input id="input" autocomplete="off" placeholder="入力して Enter(音声も可)">
+          <button class="primary" type="submit">送信</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Settings ===== -->
+  <dialog id="settings">
+    <form method="dialog" class="settings">
+      <h2>設定</h2>
+      <label><input type="checkbox" id="set-tts"> 読み上げ</label>
+      <label>読み上げ速度 <input type="range" id="set-rate" min="0.8" max="1.8" step="0.1"><output id="out-rate"></output></label>
+      <label>日本語の声 <select id="set-voice-ja"></select></label>
+      <label>英語の声 <select id="set-voice-en"></select></label>
+      <label>無音で送信するまで(ms) <input type="number" id="set-silence" min="400" max="4000" step="100"></label>
+      <label><input type="checkbox" id="set-bargein"> 読み上げ中も聞き取る(ヘッドホン推奨。話すと読み上げを止める)</label>
+      <label><input type="checkbox" id="set-autolang"> 入力言語を自動切替(英訳時は English)</label>
+      <menu><button class="primary" value="ok">閉じる</button></menu>
+    </form>
+  </dialog>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

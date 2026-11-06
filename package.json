@@ -1,0 +1,26 @@
+{
+  "name": "english-article-discussion",
+  "version": "0.1.0",
+  "description": "英語論文の訳文表示と、設問をスモールステップで解く音声対話チューター",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "mock": "MOCK=1 node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mokobear-git/english-article-discussion.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mokobear-git/english-article-discussion/issues"
+  },
+  "homepage": "https://github.com/mokobear-git/english-article-discussion#readme",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
+}
