@@ -34,14 +34,19 @@
       <textarea id="text-paper" rows="4" placeholder="本文を貼り付け(任意)"></textarea>
     </section>
     <section class="card">
-      <h2>2. 設問</h2>
-      <p class="muted">PDF・テキスト・画像。または貼り付け。</p>
+      <h2>2. 設問(任意)</h2>
+      <p class="muted">PDF・テキスト・画像。または貼り付け。設問がなければ空のままでよい。</p>
       <label class="drop" data-role="questions">
         <input type="file" id="file-questions" multiple accept=".pdf,.txt,.md,text/plain,application/pdf,image/*">
         <span>ファイルを選択 / ドロップ</span>
       </label>
       <ul class="filelist" id="list-questions"></ul>
       <textarea id="text-questions" rows="4" placeholder="設問を貼り付け(任意)"></textarea>
+      <label class="autoq">設問がない場合、AIが作る設問の数
+        <select id="auto-q">
+          <option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option>
+        </select>
+      </label>
     </section>
     <section class="card">
       <h2>3. 最初に表示するもの</h2>

@@ -11,6 +11,7 @@ import {
   SUMMARY_INSTRUCTION,
   TRANSLATE_CONTINUE,
   START_INSTRUCTION,
+  START_INSTRUCTION_NO_QUESTIONS,
 } from "./prompts.js";
 import { mockStream } from "./mock.js";
 
@@ -115,9 +116,13 @@ function baseParams(effort, maxTokens) {
   return params;
 }
 
+function startInstruction(s) {
+  return s.autoQuestions ? START_INSTRUCTION_NO_QUESTIONS(s.autoQuestions) : START_INSTRUCTION;
+}
+
 function dialogueMessages(s, pendingUser) {
   const msgs = [
-    { role: "user", content: [...docBlocks(s), { type: "text", text: START_INSTRUCTION }] },
+    { role: "user", content: [...docBlocks(s), { type: "text", text: startInstruction(s) }] },
     ...s.history,
   ];
   if (pendingUser) msgs.push(pendingUser);
@@ -154,6 +159,7 @@ function applyMeta(s, meta) {
   if (!q) return;
   s.record[q] ??= { summary_ja: "", sentences: [], final_en: "" };
   const r = s.record[q];
+  if (meta.question) r.question = meta.question;
   if (meta.summary_ja) {
     r.summary_ja = meta.summary_ja;
     r.sentences = [];
@@ -238,13 +244,14 @@ async function createSession(body) {
     }
   }
   if (!docs.some((d) => d.role === "paper")) throw new Error("論文が空。");
-  if (!docs.some((d) => d.role === "questions")) throw new Error("設問が空。");
+  const hasQuestions = docs.some((d) => d.role === "questions");
   const s = {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     title: body.title || docs.find((d) => d.role === "paper")?.name || "論文",
     docs,
     translateMode: MODES.has(body.translateMode) ? body.translateMode : "full",
+    autoQuestions: hasQuestions ? 0 : Math.min(5, Math.max(1, Number(body.autoQuestions) || 3)),
     translation: "",
     translationDone: false,
     history: [],
@@ -266,6 +273,7 @@ function publicState(s) {
   return {
     id: s.id,
     title: s.title,
+    autoQuestions: s.autoQuestions || 0,
     translation: s.translation,
     translationDone: s.translationDone,
     translateMode: s.translateMode || "full",

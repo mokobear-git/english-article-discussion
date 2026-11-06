@@ -520,6 +520,7 @@ function renderRecord() {
         .map((p) => `<div class="pair"><div class="ja">${escapeHtml(p.ja)}</div><div class="en speak" title="タップで読み上げ">${escapeHtml(p.en)}</div></div>`)
         .join("");
       return `<div class="q-block"><h3>設問 ${q}</h3>
+        ${r.question ? `<p class="muted">${escapeHtml(r.question).replace(/\n/g, "<br>")}</p>` : ""}
         ${r.summary_ja ? `<p>${escapeHtml(r.summary_ja).replace(/\n/g, "<br>")}</p>` : ""}
         ${pairs}
         ${r.final_en ? `<p><strong>完成版</strong><br><span class="speak" title="タップで読み上げ">${escapeHtml(r.final_en)}</span></p>` : ""}</div>`;
@@ -532,7 +533,7 @@ function exportMarkdown() {
   let md = `# 論文ディスカッション記録\n\n`;
   for (const q of qs) {
     const r = state.record[q];
-    md += `## 設問 ${q}\n\n### 日本語解答\n\n${r.summary_ja || ""}\n\n### 英訳\n\n`;
+    md += `## 設問 ${q}\n\n${r.question ? `${r.question}\n\n` : ""}### 日本語解答\n\n${r.summary_ja || ""}\n\n### 英訳\n\n`;
     for (const p of r.sentences || []) md += `- ${p.ja}\n  - ${p.en}\n`;
     if (r.final_en) md += `\n### 完成版\n\n${r.final_en}\n`;
     md += "\n";
@@ -885,13 +886,17 @@ function setupDrop(role) {
 
 async function startNew() {
   const mode = document.querySelector('input[name="tmode"]:checked')?.value || "full";
-  const body = { paper: [...state.files.paper], questions: [...state.files.questions], translateMode: mode };
+  const body = {
+    paper: [...state.files.paper],
+    questions: [...state.files.questions],
+    translateMode: mode,
+    autoQuestions: Number($("#auto-q").value) || 3,
+  };
   const tp = $("#text-paper").value.trim();
   const tq = $("#text-questions").value.trim();
   if (tp) body.paper.push({ kind: "text", name: "貼り付け本文", text: tp });
   if (tq) body.questions.push({ kind: "text", name: "貼り付け設問", text: tq });
   if (!body.paper.length) return alert("論文を指定。");
-  if (!body.questions.length) return alert("設問を指定。");
   const btn = $("#btn-start");
   btn.disabled = true;
   btn.textContent = "送信中…";
