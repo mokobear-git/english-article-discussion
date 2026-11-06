@@ -9,7 +9,8 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
 // ---------------------------------------------------------------- settings
-const DEFAULTS = { tts: true, rate: 1.2, silenceMs: 1100, bargeIn: false, autoLang: true, voiceJa: "", voiceEn: "" };
+// ttsMode: "answer" = 確定した推奨英文のみ / "all" = 応答をすべて / "off" = 読み上げなし
+const DEFAULTS = { ttsMode: "answer", rate: 1.0, silenceMs: 1100, bargeIn: false, autoLang: true, voiceJa: "", voiceEn: "" };
 const settings = (() => {
   try {
     return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("settings") || "{}") };
@@ -175,7 +176,7 @@ class Speaker {
     this.ended = false;
   }
   feed(text, final = false) {
-    if (settings.tts && window.speechSynthesis) {
+    if (window.speechSynthesis) {
       let rest = text.slice(this.consumed);
       let idx;
       while ((idx = findBoundary(rest)) >= 0) {
@@ -516,12 +517,12 @@ function renderRecord() {
     .map((q) => {
       const r = state.record[q];
       const pairs = (r.sentences || [])
-        .map((p) => `<div class="pair"><div class="ja">${escapeHtml(p.ja)}</div><div class="en">${escapeHtml(p.en)}</div></div>`)
+        .map((p) => `<div class="pair"><div class="ja">${escapeHtml(p.ja)}</div><div class="en speak" title="タップで読み上げ">${escapeHtml(p.en)}</div></div>`)
         .join("");
       return `<div class="q-block"><h3>設問 ${q}</h3>
         ${r.summary_ja ? `<p>${escapeHtml(r.summary_ja).replace(/\n/g, "<br>")}</p>` : ""}
         ${pairs}
-        ${r.final_en ? `<p><strong>完成版</strong><br>${escapeHtml(r.final_en)}</p>` : ""}</div>`;
+        ${r.final_en ? `<p><strong>完成版</strong><br><span class="speak" title="タップで読み上げ">${escapeHtml(r.final_en)}</span></p>` : ""}</div>`;
     })
     .join("");
 }
@@ -607,7 +608,7 @@ function renderTurn(turn) {
       setStatus();
     });
   }
-  if (state.turn === turn) speaker.feed(vis);
+  if (state.turn === turn && settings.ttsMode === "all") speaker.feed(vis);
 }
 
 function finishTurn(turn) {
@@ -625,8 +626,13 @@ function finishTurn(turn) {
   renderRecord();
   if (state.turn === turn) {
     applyMetaUI(turn.meta);
-    speaker.feed(visiblePart(turn.full), true);
-    if (!settings.tts) resumeListening();
+    const answer = turn.meta?.accepted?.en;
+    if (settings.ttsMode === "all") speaker.feed(visiblePart(turn.full), true);
+    else if (settings.ttsMode === "answer" && answer) {
+      // 推奨される英文(確定英文)だけを英語で読み上げる
+      speaker.reset();
+      speaker.feed(answer, true);
+    } else speaker.feed("", true); // 読み上げなし → すぐ聞き取りへ
   }
   scrollLog();
   setStatus();
@@ -919,7 +925,7 @@ async function startNew() {
 function bindSettings() {
   const dlg = $("#settings");
   $("#btn-settings").onclick = () => {
-    $("#set-tts").checked = settings.tts;
+    $("#set-ttsmode").value = settings.ttsMode;
     $("#set-rate").value = settings.rate;
     $("#out-rate").textContent = settings.rate;
     $("#set-silence").value = settings.silenceMs;
@@ -930,7 +936,7 @@ function bindSettings() {
   };
   $("#set-rate").oninput = (e) => ($("#out-rate").textContent = e.target.value);
   dlg.addEventListener("close", () => {
-    settings.tts = $("#set-tts").checked;
+    settings.ttsMode = $("#set-ttsmode").value;
     settings.rate = Number($("#set-rate").value);
     settings.silenceMs = Math.max(400, Number($("#set-silence").value) || DEFAULTS.silenceMs);
     settings.bargeIn = $("#set-bargein").checked;
@@ -938,7 +944,7 @@ function bindSettings() {
     settings.voiceJa = $("#set-voice-ja").value;
     settings.voiceEn = $("#set-voice-en").value;
     saveSettings();
-    if (!settings.tts) speaker.hush();
+    if (settings.ttsMode === "off") speaker.hush();
     setStatus();
   });
 }
@@ -991,6 +997,12 @@ function bind() {
   $("#btn-hint").onclick = () => submitUser("ヒント");
   $("#btn-hush").onclick = () => speaker.hush();
   $("#btn-export").onclick = exportMarkdown;
+  $("#record").addEventListener("click", (e) => {
+    const el = e.target.closest(".speak");
+    if (!el) return;
+    speaker.reset();
+    speaker.feed(el.textContent, true);
+  });
   $("#compose").onsubmit = (e) => {
     e.preventDefault();
     const v = $("#input").value;
