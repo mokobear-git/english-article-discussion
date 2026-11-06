@@ -391,7 +391,8 @@ function setStatus() {
   const mic = $("#btn-mic");
   mic.setAttribute("aria-pressed", String(state.conv));
   mic.classList.toggle("listening", listener.running);
-  $("#mic-label").textContent = state.conv ? (listener.running ? "聞き取り中" : "会話モード ON") : "会話モード";
+  $("#mic-label").textContent = state.conv ? (listener.running ? "聞き取り中" : "会話 ON") : "会話";
+  $("#go-bar").hidden = state.started || document.body.dataset.view !== "study";
   const live = $("#live");
   let msg = "";
   if (isBusy()) msg = state.turn.full ? "応答中…" : "考え中…";
@@ -411,6 +412,33 @@ function setLang(l) {
   listener.setLang(langCode(l));
   setStatus();
 }
+
+// ---------------------------------------------------------------- screen wake lock (phones)
+let wakeLock = null;
+async function updateWakeLock() {
+  try {
+    if (state.conv && document.visibilityState === "visible" && "wakeLock" in navigator) {
+      if (!wakeLock) {
+        wakeLock = await navigator.wakeLock.request("screen");
+        wakeLock.addEventListener("release", () => (wakeLock = null));
+      }
+    } else if (wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch {
+    wakeLock = null;
+  }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    listener.stop();
+    speaker.hush();
+  } else {
+    resumeListening();
+  }
+  updateWakeLock();
+});
 
 // ---------------------------------------------------------------- listening control
 function resumeListening() {
@@ -435,6 +463,7 @@ listener.onText = (t) => {
 listener.onSubmit = (t) => submitUser(t, { fromVoice: true });
 listener.onError = (m) => {
   state.conv = false;
+  updateWakeLock();
   addBubble("assistant", m, "error");
   setStatus();
 };
@@ -700,6 +729,7 @@ async function runTranslation() {
 function showStudy() {
   document.body.dataset.view = "study";
   setTab(state.started ? "chat" : "translation");
+  setStatus();
 }
 function setTab(tab) {
   document.body.dataset.tab = tab;
@@ -885,14 +915,17 @@ function bind() {
     store.set("sessionId", null);
     location.reload();
   };
-  $("#btn-go").onclick = () => {
+  const go = () => {
     try {
       speechSynthesis.speak(new SpeechSynthesisUtterance(""));
     } catch {}
     if (listener.supported) state.conv = true; // 会話モードで開始
+    updateWakeLock();
     revealStartTurn();
     setTab("chat");
   };
+  $("#btn-go").onclick = go;
+  $("#btn-go2").onclick = go;
   $$("#tabs button").forEach((b) => (b.onclick = () => setTab(b.dataset.tab)));
   $$(".pane-head .seg button").forEach((b) => (b.onclick = () => setLeft(b.dataset.left)));
   $$("#lang-seg button").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
@@ -906,6 +939,7 @@ function bind() {
       listener.stop();
       clearDraft();
     }
+    updateWakeLock();
     setStatus();
   };
   $("#btn-hint").onclick = () => submitUser("ヒント");

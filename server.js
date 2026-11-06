@@ -15,11 +15,12 @@ import { mockStream } from "./mock.js";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
-const MODEL = process.env.MODEL || "claude-opus-5-5";
+const MODEL = process.env.MODEL || "claude-haiku-5-5";
 const DIALOG_EFFORT = process.env.DIALOG_EFFORT || "low";
 const TRANSLATE_EFFORT = process.env.TRANSLATE_EFFORT || "medium";
 const FAST_MODE = process.env.FAST_MODE === "1";
 const MOCK = process.env.MOCK === "1";
+const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const DATA_DIR = path.join(here, "data", "sessions");
 const PUBLIC_DIR = path.join(here, "public");
 const MAX_BODY = 45 * 1024 * 1024;
@@ -428,6 +429,8 @@ const MIME = {
   ".svg": "image/svg+xml",
   ".json": "application/json",
   ".ico": "image/x-icon",
+  ".png": "image/png",
+  ".webmanifest": "application/manifest+json",
 };
 
 async function readJson(req) {
@@ -462,7 +465,27 @@ async function serveStatic(req, res) {
   res.end(await fs.readFile(file));
 }
 
+// Optional shared password (HTTP Basic auth) for public deployments.
+function authorized(req) {
+  if (!APP_PASSWORD) return true;
+  const h = req.headers.authorization || "";
+  if (!h.startsWith("Basic ")) return false;
+  const pass = Buffer.from(h.slice(6), "base64").toString("utf8").split(":").slice(1).join(":");
+  const a = Buffer.from(pass);
+  const b = Buffer.from(APP_PASSWORD);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 const server = http.createServer(async (req, res) => {
+  if (req.url === "/healthz") {
+    res.writeHead(200).end("ok");
+    return;
+  }
+  if (!authorized(req)) {
+    res.writeHead(401, { "WWW-Authenticate": 'Basic realm="paper-discussion", charset="UTF-8"' });
+    res.end("password required");
+    return;
+  }
   try {
     const url = new URL(req.url, "http://x");
     const parts = url.pathname.split("/").filter(Boolean);
@@ -491,5 +514,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`http://localhost:${PORT}  model=${MODEL}${MOCK ? " (MOCK)" : ""}${fastAvailable ? " fast" : ""}`);
+  console.log(`http://localhost:${PORT}  model=${MODEL}${MOCK ? " (MOCK)" : ""}${fastAvailable ? " fast" : ""}${APP_PASSWORD ? " password" : ""}`);
 });

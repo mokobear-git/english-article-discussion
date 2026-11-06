@@ -26,6 +26,43 @@ npm start
 
 ブラウザで http://localhost:3000 を開く。音声認識は Chrome / Edge / Safari で動作する(Firefox はテキスト入力のみ)。
 
+## スマートフォンで使う
+
+マイクは https でしか使えない。次のいずれかで https の URL を用意する。
+
+### A. Render に公開する(常時使える)
+
+1. https://render.com にログインし、New → Blueprint を選ぶ。
+2. このリポジトリを選ぶ。`render.yaml` の設定が読み込まれる。
+3. 環境変数 `ANTHROPIC_API_KEY`(API キー)と `APP_PASSWORD`(アプリのパスワード、任意の文字列)を入力して作成。
+4. 発行された `https://〜.onrender.com` をスマホで開く。ユーザー名は空欄または任意、パスワードは `APP_PASSWORD`。
+
+無料プランの注意: 15分間アクセスがないと停止し、次回の起動に数十秒かかる。停止・再デプロイでサーバー側の記録(`data/`)は消える。成果は「Markdownで保存」で手元に残す。
+
+### B. 手元の PC を一時的に公開する
+
+PC で `npm start` したうえで、別のターミナルで次を実行する。表示された `https://〜.trycloudflare.com` をスマホで開く。
+
+```bash
+npx cloudflared tunnel --url http://localhost:3000
+```
+
+URL を知る人は誰でも使えるため、`APP_PASSWORD` を設定してから起動する。
+
+```bash
+APP_PASSWORD=好きなパスワード npm start
+```
+
+### ホーム画面に追加
+
+ブラウザの共有メニュー(iPhone: Safari の共有 → ホーム画面に追加、Android: Chrome のメニュー → ホーム画面に追加)でアプリとして起動できる。
+
+### スマホでの動作
+
+- 会話モード中は画面の自動消灯を止める(対応ブラウザのみ)。
+- アプリを裏に回すと聞き取りと読み上げを止め、戻ると再開する。
+- iPhone の Safari は音声認識の連続動作が不安定な場合がある。聞き取りが止まったら「会話」ボタンを押し直す。
+
 API キーなしで画面だけ試す場合はモックで起動する。
 
 ```bash
@@ -52,11 +89,12 @@ npm run mock
 
 | 変数 | 既定値 | 内容 |
 |---|---|---|
-| `MODEL` | `claude-opus-5-5` | 使用モデル |
+| `MODEL` | `claude-haiku-5-5` | 使用モデル。精度を上げたい場合は `claude-sonnet-5-5` や `claude-opus-5-5` |
 | `DIALOG_EFFORT` | `low` | 対話ターンの思考量。`low` が最速 |
 | `TRANSLATE_EFFORT` | `medium` | 全文翻訳の思考量 |
-| `FAST_MODE` | 未設定 | `1` で Opus の fast モード(出力速度最大約2.5倍、料金2倍、Claude API のみ) |
+| `FAST_MODE` | 未設定 | `1` で Opus の fast モード(Opus 使用時のみ。出力速度最大約2.5倍、料金2倍) |
 | `PORT` | `3000` | ポート |
+| `APP_PASSWORD` | 未設定 | 設定するとパスワード保護(Basic 認証)を有効にする。公開時は必須 |
 
 速度のための実装上の工夫:
 
@@ -71,14 +109,14 @@ npm run mock
 server.js      HTTP サーバー、Claude API 呼び出し(ストリーミング)、セッション保存
 prompts.js     システムプロンプト(指導手順・METAライン仕様)と各タスク指示
 mock.js        MOCK=1 用の疑似応答
-public/        画面(index.html / style.css / app.js)
+public/        画面(index.html / style.css / app.js)、PWA 用 manifest とアイコン
+render.yaml    Render へのデプロイ設定
 ```
 
 - モデルは各応答の末尾に `<<<META {...}>>>` 行(設問番号・段階・選択肢・英訳対象文・確定英文など)を付ける。画面はこの行を表示・読み上げせず、選択肢ボタン、英訳対象カード、成果タブの更新に使う。
-- 拒否応答(refusal)に備え、サーバー側フォールバック(`fallbacks: "default"`)を有効にしている。
+- Sonnet / Opus 使用時は、拒否応答(refusal)に備えてサーバー側フォールバック(`fallbacks: "default"`)を有効にする。Haiku には同機能がないため、拒否時はエラー表示となる。
 
 ## 注意
 
-- マイクはセキュアコンテキスト(https または localhost)でのみ使用できる。スマートフォンから使う場合は https で公開する。
 - 音声認識の精度・対応言語はブラウザに依存する。Chrome の音声認識は音声データを Google のサーバーに送る。
 - 論文データは Anthropic API に送信される。

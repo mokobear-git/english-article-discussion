@@ -35,6 +35,10 @@
 html, body { height: 100%; }
 body {
   margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
   background: var(--bg);
   color: var(--text);
   font: 15px/1.7 var(--font);
@@ -69,7 +73,7 @@ button { cursor: pointer; }
 /* ---------- Setup ---------- */
 body:not([data-view="setup"]) #setup { display: none; }
 body[data-view="setup"] #study, body[data-view="setup"] #tabs { display: none; }
-.setup { max-width: 760px; width: 100%; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 16px; }
+.setup { flex: 1; min-height: 0; overflow: auto; align-content: start; max-width: 760px; width: 100%; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 16px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
 .card h2 { font-size: 15px; margin: 0 0 4px; }
 .card p { margin: 0 0 10px; }
@@ -90,7 +94,10 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .pane { min-height: 0; display: flex; flex-direction: column; }
 .pane.left { border-right: 1px solid var(--line); background: var(--surface); }
 .pane-head { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; border-bottom: 1px solid var(--line); }
-.panel { flex: 1; overflow: auto; padding: 16px 20px 40px; }
+.panel { flex: 1; overflow: auto; padding: 16px 20px 40px; -webkit-overflow-scrolling: touch; }
+.go-bar { padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
+.go-bar button { width: 100%; padding: 12px; }
+.short { display: none; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { border: 0; background: transparent; padding: 5px 12px; }
 .seg button.on { background: var(--accent); color: var(--accent-ink); }
@@ -110,6 +117,34 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
   .pane-head .seg { display: none; }
   body[data-tab="chat"] .pane.left { display: none; }
   body:not([data-tab="chat"]) .pane.chat { display: none; }
+}
+@media (min-width: 901px) {
+  .go-bar { display: none; }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 600px) {
+  body { font-size: 15px; }
+  .topbar { padding: 8px 12px calc(8px); padding-top: calc(8px + env(safe-area-inset-top)); gap: 8px; }
+  .topbar h1 { font-size: 15px; }
+  .topbar .ghost { padding: 4px 10px; font-size: 13px; }
+  .setup { padding: 12px 12px 32px; }
+  .panel { padding: 12px 16px 32px; }
+  .log { padding: 12px; }
+  .msg { max-width: 96%; }
+  .progress { padding: 6px 12px; min-height: 32px; }
+  .target { margin: 0 12px 6px; }
+  .choices { padding: 0 12px 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .choices button { flex: 0 0 auto; max-width: 80vw; white-space: normal; }
+  .dock { padding: 6px 12px calc(8px + env(safe-area-inset-bottom)); gap: 6px; }
+  .controls { flex-wrap: nowrap; gap: 6px; }
+  .mic { flex: 1; justify-content: center; padding: 12px 10px; font-size: 15px; }
+  .mic .dot { width: 12px; height: 12px; }
+  .controls .ghost { padding: 10px 10px; }
+  .seg button { padding: 10px 10px; }
+  .long { display: none; }
+  .short { display: inline; }
+  .live { font-size: 13px; min-height: 1.4em; }
 }
 
 /* ---------- Chat ---------- */
@@ -151,7 +186,7 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .mic.listening .dot { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
 .compose { display: flex; gap: 8px; }
-.compose input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bg); }
+.compose input { flex: 1; min-width: 0; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bg); }
 
 /* ---------- Record ---------- */
 .q-block { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; background: var(--bg); }
