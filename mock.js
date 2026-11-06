@@ -16,39 +16,39 @@ function scriptFor(params) {
   const meta = (o) => `\n<<<META ${JSON.stringify(o)}>>>`;
   if (text.includes("タスクB")) {
     return (
-      "設問は2つ。設問1。What was the primary outcome? 主要評価項目は何か。\nステップ1。この設問が求めているのは次のどれか。\nA. 研究が最も重視した評価の指標\nB. 研究対象者の特徴\nC. 統計解析の方法" +
-      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", choices: ["A. 研究が最も重視した評価の指標", "B. 研究対象者の特徴", "C. 統計解析の方法"] })
+      "設問は2つ。設問1。Do you think the results are clinically meaningful? この結果は臨床的に意味があると考えるか。\nステップ1。あなたの考えに最も近いのはどれか。\nA. 意味がある。死亡率が下がったため\nB. 一部の患者に限って意味がある\nC. まだ判断できない" +
+      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", choices: ["A. 意味がある。死亡率が下がったため", "B. 一部の患者に限って意味がある", "C. まだ判断できない"] })
     );
   }
   if (turns === 1) {
     return (
-      "正解。研究の中心となる指標を答える設問。方法の節に記載があり、全死亡と定められている。まとめると、主要評価項目は全死亡である。こうですか?" +
+      "意味があるという立場。理由は死亡率の低下。まとめると、死亡率が下がったため、この結果は臨床的に意味があると考える。こうですか?" +
       meta({ q: 1, total_q: 2, phase: "confirm", expect: "ja", choices: ["OK", "修正したい"] })
     );
   }
   if (turns === 2) {
-    const summary = "1. 主要評価項目は全死亡であった。2. 追跡期間は5年であった。";
+    const summary = "1. この結果は臨床的に意味があると考える。2. 死亡率が下がったからである。";
     return (
-      `解答文。\n${summary}\n1文目を英訳せよ。主要評価項目は全死亡であった。\n語彙ヒント: primary outcome(主要評価項目)、all-cause mortality(全死亡)` +
-      meta({ q: 1, total_q: 2, phase: "english", expect: "en", summary_ja: summary, target_ja: "主要評価項目は全死亡であった。", progress: "1/2" })
+      `解答文。\n${summary}\n1文目を英訳せよ。この結果は臨床的に意味があると考える。\n語彙ヒント: clinically meaningful(臨床的に意味がある)、consider(考える)` +
+      meta({ q: 1, total_q: 2, phase: "english", expect: "en", summary_ja: summary, target_ja: "この結果は臨床的に意味があると考える。", progress: "1/2" })
     );
   }
   if (turns === 3) {
     return (
-      "合格。The primary outcome was all-cause mortality. 次。追跡期間は5年であった。\n語彙ヒント: follow-up(追跡)、median(中央値)" +
+      "合格。I consider these results clinically meaningful. 次。死亡率が下がったからである。\n語彙ヒント: mortality(死亡率)、decrease(下がる)" +
       meta({
         q: 1, total_q: 2, phase: "english", expect: "en",
-        accepted: { ja: "主要評価項目は全死亡であった。", en: "The primary outcome was all-cause mortality." },
-        target_ja: "追跡期間は5年であった。", progress: "2/2",
+        accepted: { ja: "この結果は臨床的に意味があると考える。", en: "I consider these results clinically meaningful." },
+        target_ja: "死亡率が下がったからである。", progress: "2/2",
       })
     );
   }
   return (
-    "合格。完成版。The primary outcome was all-cause mortality. The follow-up period was 5 years. 次の設問へ進むか。" +
+    "合格。完成版。I consider these results clinically meaningful. This is because mortality decreased. 次の設問へ進むか。" +
     meta({
       q: 1, total_q: 2, phase: "q_done", expect: "ja", choices: ["次の設問へ", "この設問をもう一度"],
-      accepted: { ja: "追跡期間は5年であった。", en: "The follow-up period was 5 years." },
-      final_en: "The primary outcome was all-cause mortality. The follow-up period was 5 years.",
+      accepted: { ja: "死亡率が下がったからである。", en: "This is because mortality decreased." },
+      final_en: "I consider these results clinically meaningful. This is because mortality decreased.",
     })
   );
 }
