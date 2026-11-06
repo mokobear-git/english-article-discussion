@@ -127,7 +127,13 @@
   <dialog id="settings">
     <form method="dialog" class="settings">
       <h2>設定</h2>
-      <label><input type="checkbox" id="set-tts"> 読み上げ</label>
+      <label>読み上げ
+        <select id="set-ttsmode">
+          <option value="answer">推奨英文のみ(英訳の確定後)</option>
+          <option value="all">応答をすべて</option>
+          <option value="off">なし</option>
+        </select>
+      </label>
       <label>読み上げ速度 <input type="range" id="set-rate" min="0.8" max="1.8" step="0.1"><output id="out-rate"></output></label>
       <label>日本語の声 <select id="set-voice-ja"></select></label>
       <label>英語の声 <select id="set-voice-en"></select></label>
