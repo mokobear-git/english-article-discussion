@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>論文ディスカッション 使い方</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 18mm; }
+  :root { --accent: #1f5f8b; --muted: #5f5e59; --line: #d9d6ce; --soft: #f3f1ec; --warn: #a5452b; }
+  * { box-sizing: border-box; }
+  body { font-family: "IPAPGothic", "IPAGothic", "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 10.5pt; line-height: 1.75; color: #1d1d1b; margin: 0; }
+  h1 { font-size: 22pt; margin: 0 0 4mm; color: var(--accent); letter-spacing: .02em; }
+  h2 { font-size: 14pt; margin: 8mm 0 3mm; padding-bottom: 1.5mm; border-bottom: 1.5px solid var(--accent); break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 5mm 0 2mm; break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  ol, ul { margin: 0 0 3mm; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+  code, .kbd { font-family: "IPAGothic", monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 3px; padding: 0 1.2mm; font-size: 9.5pt; }
+  pre { font-family: "IPAGothic", monospace; background: var(--soft); border: 1px solid var(--line); border-radius: 4px; padding: 2.5mm 3mm; font-size: 9pt; white-space: pre-wrap; margin: 0 0 3mm; break-inside: avoid; }
+  .lead { color: var(--muted); font-size: 11pt; margin-bottom: 6mm; }
+  .box { border: 1px solid var(--line); background: var(--soft); border-radius: 5px; padding: 3mm 4mm; margin: 3mm 0; break-inside: avoid; }
+  .box.warn { border-color: var(--warn); background: #fbf1ee; }
+  .box b.t { display: block; margin-bottom: 1mm; color: var(--accent); }
+  .box.warn b.t { color: var(--warn); }
+  .row { display: flex; gap: 6mm; align-items: flex-start; break-inside: avoid; margin: 3mm 0 4mm; }
+  .row .text { flex: 1; }
+  .row img { width: 52mm; border: 1px solid var(--line); border-radius: 4mm; flex: none; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9.8pt; break-inside: avoid; }
+  th, td { border: 1px solid var(--line); padding: 1.5mm 2.5mm; text-align: left; vertical-align: top; }
+  th { background: var(--soft); }
+  .flow { display: flex; flex-wrap: wrap; gap: 1.5mm; margin: 2mm 0 4mm; }
+  .flow span { border: 1px solid var(--accent); color: var(--accent); border-radius: 3mm; padding: .5mm 2.5mm; font-size: 9.5pt; }
+  .flow i { color: var(--muted); font-style: normal; }
+  .page-break { break-before: page; }
+  .toc { columns: 2; font-size: 10pt; margin-bottom: 4mm; }
+  .toc div { margin-bottom: 1mm; }
+  .small { font-size: 9pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<h1>論文ディスカッション 使い方</h1>
+<p class="lead">英語論文の日本語訳を読み、設問を小さな問いに分けて解き、解答を1文ずつ英訳する。音声で会話しながら進める学習アプリ。</p>
+
+<div class="toc">
+  <div>1. 全体の流れ</div>
+  <div>2. 準備するもの(APIキーとパスワード)</div>
+  <div>3. スマホで使えるようにする(Render)</div>
+  <div>4. 学習の進め方</div>
+  <div>5. 設定</div>
+  <div>6. 困ったとき</div>
+  <div>付録 PCだけで使う</div>
+</div>
+
+<h2>1. 全体の流れ</h2>
+<div class="flow">
+  <span>論文と設問を読み込む</span><i>→</i><span>日本語訳を読む</span><i>→</i><span>選択肢つきの小さな問いに答える</span><i>→</i><span>「こうですか?」を確認</span><i>→</i><span>日本語の解答文</span><i>→</i><span>1文ずつ英訳</span><i>→</i><span>次の設問</span>
+</div>
+<p>最初に一度だけ、サーバーの準備(第2章・第3章)が必要。準備が済めば、スマホでURLを開くだけで使える。</p>
+
+<h2>2. 準備するもの</h2>
+<table>
+  <tr><th style="width:28%">項目</th><th>何か</th><th style="width:30%">入手方法</th></tr>
+  <tr><td>Anthropic APIキー</td><td>アプリがAIを呼び出すための鍵。<code>sk-ant-</code> で始まる文字列。利用料はこのキーの持ち主に請求される。</td><td>Anthropicのコンソールで発行(2.1)</td></tr>
+  <tr><td>アプリのパスワード<br>(<code>APP_PASSWORD</code>)</td><td>公開したアプリに他人が入れないようにする合言葉。</td><td>どこかで発行するものではない。自分で決める(2.2)</td></tr>
+  <tr><td>GitHubアカウント</td><td>コードの置き場所。作成済み。</td><td>—</td></tr>
+  <tr><td>Renderアカウント</td><td>アプリを動かすサーバー。httpsのURLが付く。</td><td>GitHubアカウントで登録(第3章)</td></tr>
+</table>
+
+<h3>2.1 APIキーを取得する</h3>
+<ol>
+  <li>PCのブラウザで <code>https://platform.claude.com</code>(Anthropicのコンソール)を開き、アカウントを作成してログインする。</li>
+  <li>Billing(請求)の画面で支払い方法を登録し、クレジットを購入する(前払い制)。</li>
+  <li>API Keys の画面で「Create Key」を押す。名前は任意(例: <code>paper-discussion</code>)。</li>
+  <li>表示されたキーをコピーし、パスワード管理アプリなど安全な場所に保管する。<b>キーはこの画面でしか全文表示されない。</b></li>
+  <li>使いすぎ防止のため、Limits(利用上限)の画面で月の上限額を設定しておく。</li>
+</ol>
+<div class="box">
+  <b class="t">費用の目安</b>
+  標準のモデルは最も安価な Claude Haiku 5.5(入力100万トークンあたり0.10ドル、出力0.50ドル)。論文や設問はキャッシュして使い回すため、論文1本の学習で数円〜数十円程度が目安。論文の長さとやり取りの回数で変わる。実際の利用額はコンソールの Usage 画面で確認できる。
+</div>
+<div class="box warn">
+  <b class="t">APIキーの扱い</b>
+  キーを知る人は誰でも、あなたの費用でAIを使える。チャット、メール、GitHub、スクリーンショットに載せない。入力するのはRenderの環境変数の欄だけ。漏れた疑いがあれば、コンソールでそのキーを削除(Delete)し、新しいキーを作り直す。
+</div>
+
+<h3>2.2 アプリのパスワードを決める</h3>
+<ul>
+  <li>自分で好きな文字列を決める。他人に推測されにくい、長めのもの(12文字以上、英数字の混在)にする。例: <code>kaigi-Rondoku-2026x</code> のような形。</li>
+  <li>パスワード管理アプリやメモに控える。設定後にRenderの画面で確認・変更もできる。</li>
+  <li>アプリを開くとログイン画面が出る。<b>ユーザー名は空欄(または任意の文字)</b>、パスワードに決めた文字列を入れる。ブラウザに保存すれば次回から入力不要。</li>
+  <li>GitHubのリポジトリは公開(public)だが、パスワードとAPIキーはRenderにだけ保存されるため、コードを見ても分からない。</li>
+</ul>
+
+<h2>3. スマホで使えるようにする(Render)</h2>
+<p>マイクはhttpsのURLでしか使えない。Renderに置くと、httpsのURLが自動で付く。作業はPCで行うのが楽。</p>
+<ol>
+  <li><code>https://render.com</code> を開き、「Get Started」から <b>GitHubアカウントで</b> 登録・ログインする。</li>
+  <li>RenderにGitHubへのアクセスを許可する。対象リポジトリに <code>english-article-discussion</code> を含める。</li>
+  <li>ダッシュボードで「New +」→「Blueprint」を選ぶ。</li>
+  <li>リポジトリ <code>mokobear-git/english-article-discussion</code> を選ぶ。設定ファイル(<code>render.yaml</code>)が自動で読み込まれる。</li>
+  <li>入力欄が2つ表示される。
+    <ul>
+      <li><code>ANTHROPIC_API_KEY</code>: 2.1でコピーしたAPIキー</li>
+      <li><code>APP_PASSWORD</code>: 2.2で決めたパスワード</li>
+    </ul>
+  </li>
+  <li>「Apply」(作成)を押す。数分で構築が終わり、<code>https://english-article-discussion-xxxx.onrender.com</code> のようなURLが表示される。</li>
+  <li>スマホでそのURLを開き、パスワードを入れる。</li>
+  <li>ホーム画面に追加すると、アプリのように起動できる。
+    <ul>
+      <li>iPhone: Safariの共有ボタン → 「ホーム画面に追加」</li>
+      <li>Android: Chromeのメニュー → 「ホーム画面に追加」</li>
+    </ul>
+  </li>
+</ol>
+<div class="box">
+  <b class="t">後からキーやパスワードを変える</b>
+  Renderのダッシュボード → サービス <code>english-article-discussion</code> → 「Environment」で値を書き換えて保存する。自動で再起動し、新しい値が使われる。
+</div>
+<div class="box warn">
+  <b class="t">無料プランの注意</b>
+  15分間アクセスがないとサーバーが停止し、次に開いたときの起動に数十秒〜1分かかる。停止や更新のたびにサーバー側の記録は消えるため、学習の成果は「成果」タブの「Markdownで保存」で手元に残す。常時起動させたい場合はRenderの有料プランにする。
+</div>
+
+<h2 class="page-break">4. 学習の進め方</h2>
+
+<div class="row">
+  <img src="img/s1-setup.png" alt="">
+  <div class="text">
+    <h3>① 論文と設問を読み込む</h3>
+    <ul>
+      <li>「1. 論文」「2. 設問」それぞれにファイルを選ぶ。PDF・テキスト・画像(写真)に対応。複数ファイル可。</li>
+      <li>本文を貼り付けてもよい。</li>
+      <li>Wordファイルは読めない。PDFに変換してから選ぶ。</li>
+      <li>「開始(訳文を表示)」を押す。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <img src="img/s2-translation.png" alt="">
+  <div class="text">
+    <h3>② 日本語訳を読む</h3>
+    <ul>
+      <li>訳文が上から順に流れて表示される。長い論文では完了まで数分かかる。</li>
+      <li>専門用語は初出時に英語が括弧で付く。数値・統計量は原文のまま。</li>
+      <li>読み終えたら、下の「設問へ進む」を押す。この時点で会話モードがONになる。</li>
+      <li>初回はマイクの使用許可を求められる。「許可」を選ぶ。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <img src="img/s3-steps.png" alt="">
+  <div class="text">
+    <h3>③ 小さな問いに答える</h3>
+    <ul>
+      <li>設問の答えにたどり着くための問いが、選択肢つきで1つずつ出る。問いは読み上げられる。</li>
+      <li>答え方は3通り。
+        <ul>
+          <li>声で「Bです」「エー」などと言う</li>
+          <li>選択肢のボタンを押す</li>
+          <li>下の入力欄に打ち込む</li>
+        </ul>
+      </li>
+      <li>話した内容は、話している途中から画面に表示される。話し終えて約1秒黙ると自動で送信される。</li>
+      <li>正誤と、論文の該当箇所による根拠が返ってくる。</li>
+      <li>問いが揃うと、考えのまとめが示され「こうですか?」と聞かれる。「OK」か「修正したい」で答える。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <img src="img/s4-english.png" alt="">
+  <div class="text">
+    <h3>④ 1文ずつ英訳する</h3>
+    <ul>
+      <li>OKを出すと、日本語の解答文(番号付き)が示される。</li>
+      <li>青枠のカードに、いま英訳する1文が表示される。語彙のヒントも出る。</li>
+      <li>聞き取りの言語は自動で English に切り替わる。英文を声で言うか、入力する。</li>
+      <li>評価・訂正のあと確定英文が示され、次の文へ進む。</li>
+      <li>行き詰まったら「ヒント」ボタンを押す。構文のヒントが追加で出る。</li>
+      <li>全文が終わると完成版の英文が示され、次の設問へ進むか聞かれる。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="row">
+  <img src="img/s5-record.png" alt="">
+  <div class="text">
+    <h3>⑤ 成果を保存する</h3>
+    <ul>
+      <li>「成果」タブに、設問ごとの日本語解答・確定英文・完成版がたまる。</li>
+      <li>「Markdownで保存」で、成果と訳文を1つのファイルとして端末に保存できる。</li>
+      <li>途中でアプリを閉じても、同じ端末・同じブラウザで開き直せば続きから再開する(サーバーが停止していない場合)。</li>
+      <li>別の論文を始めるときは、右上の「新規」を押す。</li>
+    </ul>
+  </div>
+</div>
+
+<h3>画面下のボタン</h3>
+<table>
+  <tr><th style="width:22%">ボタン</th><th>働き</th></tr>
+  <tr><td>会話</td><td>会話モードのON/OFF。ONの間は、読み上げが終わると自動で聞き取りに戻る。赤い点が動いていれば聞き取り中。</td></tr>
+  <tr><td>日 / EN</td><td>聞き取る言語の切り替え。英訳の段階では自動で EN になる。日本語で質問したいときは「日」に戻す。</td></tr>
+  <tr><td>ヒント</td><td>追加のヒントを求める。</td></tr>
+  <tr><td>停止</td><td>読み上げを止める。</td></tr>
+  <tr><td>▶ 読む</td><td>各メッセージの右上。そのメッセージをもう一度読み上げる。</td></tr>
+</table>
+<p>アプリの応答中に話しかけると、その応答を途中で止めて、新しい発話に答える。</p>
+
+<h2>5. 設定(右上の「設定」)</h2>
+<table>
+  <tr><th style="width:32%">項目</th><th>内容</th></tr>
+  <tr><td>読み上げ</td><td>アプリの応答を音声で読むかどうか。</td></tr>
+  <tr><td>読み上げ速度</td><td>0.8〜1.8倍。</td></tr>
+  <tr><td>日本語の声 / 英語の声</td><td>端末に入っている声から選ぶ。</td></tr>
+  <tr><td>無音で送信するまで</td><td>話し終えてから自動送信するまでの待ち時間(ミリ秒)。途中で送られてしまう場合は長くする(例 1800)。</td></tr>
+  <tr><td>読み上げ中も聞き取る</td><td>ONにすると、読み上げの途中で話して割り込める。スピーカーの音を拾うため、イヤホン使用時のみONにする。</td></tr>
+  <tr><td>入力言語を自動切替</td><td>英訳の段階で聞き取り言語を自動で English にする。</td></tr>
+</table>
+
+<h2>6. 困ったとき</h2>
+<table>
+  <tr><th style="width:34%">症状</th><th>対処</th></tr>
+  <tr><td>マイクが反応しない</td><td>URLが https で始まっているか確認。ブラウザのサイト設定でマイクを「許可」にする。iPhoneは「設定 → Safari → マイク」も確認。</td></tr>
+  <tr><td>聞き取りが止まる(iPhone)</td><td>iPhoneのSafariは連続の聞き取りが不安定なことがある。「会話」ボタンを押し直す。</td></tr>
+  <tr><td>読み上げの音が出ない</td><td>iPhoneの消音モード(サイレントスイッチ)を解除し、音量を上げる。設定の「読み上げ」がONか確認。</td></tr>
+  <tr><td>開くのに時間がかかる</td><td>Render無料プランの停止からの起動中。1分ほど待つ。</td></tr>
+  <tr><td>「APIキーが無効」と出る</td><td>Renderの Environment で <code>ANTHROPIC_API_KEY</code> を確認。コンソールでキーが削除されていないか、クレジット残高があるか確認。</td></tr>
+  <tr><td>「レート制限」と出る</td><td>短時間に使いすぎ。少し待ってから再度話す。</td></tr>
+  <tr><td>以前の記録が消えた</td><td>Render無料プランの停止で消えた。保存したMarkdownから振り返る。</td></tr>
+  <tr><td>パスワードを忘れた</td><td>Renderの Environment で <code>APP_PASSWORD</code> を確認・変更する。</td></tr>
+</table>
+<p class="small">音声認識はブラウザの機能を使う。ChromeとSafariの音声認識では、音声がGoogleまたはAppleのサーバーに送られる。論文の内容はAnthropicのAPIに送られる。Firefoxは音声認識に対応していないため、文字入力のみとなる。</p>
+
+<h2>付録 PCだけで使う</h2>
+<p>スマホを使わず、自分のPCのブラウザで使う方法。PCでは https でなくても <code>localhost</code> ならマイクが使える。</p>
+<ol>
+  <li>Node.js(バージョン20以上)を <code>https://nodejs.org</code> からインストールする。</li>
+  <li>ターミナル(WindowsはPowerShell)で次を実行する。
+<pre>git clone https://github.com/mokobear-git/english-article-discussion.git
+cd english-article-discussion
+npm install</pre></li>
+  <li>APIキーを設定して起動する。
+<pre>Mac:      export ANTHROPIC_API_KEY=sk-ant-...(自分のキー)
+          npm start
+Windows:  $env:ANTHROPIC_API_KEY="sk-ant-...(自分のキー)"
+          npm start</pre></li>
+  <li>ブラウザ(Chrome推奨)で <code>http://localhost:3000</code> を開く。</li>
+</ol>
+<p>PCで起動したアプリをスマホから一時的に使う方法(cloudflaredによる公開)は、リポジトリの README に記載。</p>
+
+</body>
+</html>
