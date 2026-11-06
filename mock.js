@@ -18,9 +18,11 @@ function scriptFor(params) {
   const turns = params.messages.filter((m) => m.role === "assistant").length;
   const meta = (o) => `\n<<<META ${JSON.stringify(o)}>>>`;
   if (text.includes("タスクB")) {
+    const intro = text.includes("設問なし") ? "設問を2個作成した。" : "設問は2つ。";
     return (
-      "設問は2つ。設問1。Do you think the results are clinically meaningful? この結果は臨床的に意味があると考えるか。\nステップ1。あなたの考えに最も近いのはどれか。\nA. 意味がある。死亡率が下がったため\nB. 一部の患者に限って意味がある\nC. まだ判断できない" +
-      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", choices: ["A. 意味がある。死亡率が下がったため", "B. 一部の患者に限って意味がある", "C. まだ判断できない"] })
+      intro +
+      "設問1。Do you think the results are clinically meaningful? この結果は臨床的に意味があると考えるか。\nステップ1。あなたの考えに最も近いのはどれか。\nA. 意味がある。死亡率が下がったため\nB. 一部の患者に限って意味がある\nC. まだ判断できない" +
+      meta({ q: 1, total_q: 2, phase: "steps", expect: "ja", question: "Do you think the results are clinically meaningful?\nこの結果は臨床的に意味があると考えるか。", choices: ["A. 意味がある。死亡率が下がったため", "B. 一部の患者に限って意味がある", "C. まだ判断できない"] })
     );
   }
   if (turns === 1) {

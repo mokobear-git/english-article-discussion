@@ -100,6 +100,8 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .pane-head { gap: 8px; }
 .pane-head #translation-state { margin-left: auto; text-align: right; }
 .seg.mode button { padding: 4px 10px; font-size: 13px; }
+.autoq { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13.5px; color: var(--muted); }
+.autoq select { border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; background: var(--bg); }
 .radios { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 6px; }
 .radios label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .short { display: none; }
