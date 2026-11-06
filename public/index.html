@@ -43,7 +43,16 @@
       <ul class="filelist" id="list-questions"></ul>
       <textarea id="text-questions" rows="4" placeholder="設問を貼り付け(任意)"></textarea>
     </section>
-    <button class="primary big" id="btn-start">開始(訳文を表示)</button>
+    <section class="card">
+      <h2>3. 最初に表示するもの</h2>
+      <div class="radios" id="mode-setup">
+        <label><input type="radio" name="tmode" value="full" checked> 全文訳</label>
+        <label><input type="radio" name="tmode" value="summary"> 要約</label>
+        <label><input type="radio" name="tmode" value="none"> なし(すぐ設問へ)</label>
+      </div>
+      <p class="muted small">新聞記事など著作権のある文章は、全文訳の代わりに要約になることがある。</p>
+    </section>
+    <button class="primary big" id="btn-start">開始</button>
     <p class="muted small" id="env-note"></p>
   </main>
 
@@ -57,9 +66,13 @@
   <main id="study" class="study">
     <section class="pane left">
       <div class="pane-head">
-        <div class="seg">
+        <div class="seg leftsel">
           <button data-left="translation" class="on">訳文</button>
           <button data-left="record">成果</button>
+        </div>
+        <div class="seg mode" id="mode-seg">
+          <button data-mode="full">全文訳</button>
+          <button data-mode="summary">要約</button>
         </div>
         <span class="muted small" id="translation-state"></span>
       </div>

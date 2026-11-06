@@ -9,6 +9,9 @@ function lastUserText(messages) {
 
 function scriptFor(params) {
   const text = lastUserText(params.messages);
+  if (text.includes("タスクA: 要約")) {
+    return "## 背景\n\n模擬データによる表示確認用の要約である。\n\n## 主な結果\n\nハザード比(HR)0.72で、死亡率が低下した。";
+  }
   if (text.includes("タスクA")) {
     return "## 要旨\n\n背景:本研究は模擬データによる表示確認用である。\n\n## 方法\n\n対象者(participants)1,234名を解析した。\n\n## 結果\n\nハザード比(HR)0.72、95% CI 0.60–0.86。";
   }
