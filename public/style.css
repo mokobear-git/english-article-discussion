@@ -118,7 +118,7 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .prose h3 { font-size: calc(15px * var(--fs)) !important; }
 .choices button { font-size: calc(15px * var(--fs)); line-height: 1.5; }
 .live { font-size: calc(14px * var(--fs)) !important; }
-.compose input { font-size: max(16px, calc(15px * var(--fs))) !important; }
+.compose textarea { font-size: max(16px, calc(15px * var(--fs))) !important; }
 .prose .cursor::after { content: "▍"; color: var(--accent); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
@@ -126,7 +126,7 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
   .tabs { display: flex; border-bottom: 1px solid var(--line); background: var(--surface); }
   .tabs button { flex: 1; border: 0; background: none; padding: 10px; color: var(--muted); border-bottom: 2px solid transparent; }
   .tabs button.on { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
-  .study { grid-template-columns: 1fr; }
+  .study { grid-template-columns: minmax(0, 1fr); }
   .pane.left { border-right: 0; }
   .pane-head .seg.leftsel { display: none; }
   body[data-tab="chat"] .pane.left { display: none; }
@@ -148,12 +148,14 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
   .msg { max-width: 96%; }
   .progress { padding: 6px 12px; min-height: 32px; }
   .target { margin: 0 12px 6px; }
-  .choices { padding: 0 12px 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .choices button { flex: 0 0 auto; max-width: 80vw; white-space: normal; }
+  /* スマホ: 選択肢は記号だけのボタンを横一列に等幅で並べる(本文は会話欄で読む) */
+  body .choices { padding: 0 12px 8px; flex-wrap: nowrap; gap: 8px; }
+  body .choices button { flex: 1 1 0; min-width: 0; padding: 10px 6px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  body .choices button.keyed .c-full { display: none; }
+  body .choices button.keyed .c-key { display: inline; font-weight: 700; font-size: calc(20px * var(--fs)); line-height: 1.2; }
   .dock { padding: 6px 12px calc(8px + env(safe-area-inset-bottom)); gap: 6px; }
-  .controls { flex-wrap: nowrap; gap: 6px; }
-  .mic { flex: 1; justify-content: center; padding: 12px 10px; font-size: 15px; }
-  .mic .dot { width: 12px; height: 12px; }
+  .controls { flex-wrap: nowrap; gap: 6px; min-width: 0; }
+  .controls > * { min-width: 0; flex-shrink: 1; }
   .controls .ghost { padding: 10px 10px; }
   .seg button { padding: 10px 10px; }
   .long { display: none; }
@@ -169,7 +171,6 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .msg { max-width: 92%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; font-size: calc(15px * var(--fs)); line-height: 1.75; }
 .msg.assistant { background: var(--surface); border: 1px solid var(--line); align-self: flex-start; }
 .msg.user { background: var(--user); align-self: flex-end; }
-.msg.user.draft { opacity: .7; border: 1px dashed var(--accent); }
 .msg.error { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
 .msg.thinking::after { content: "考え中…"; color: var(--muted); }
 .msg .say { float: right; margin-left: 8px; border: 0; background: none; color: var(--muted); font-size: 12px; }
@@ -186,22 +187,21 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
   border-radius: 10px; padding: 8px 12px; text-align: left; max-width: 100%;
 }
 .choices button:hover { background: var(--accent); color: var(--accent-ink); }
+.choices .c-key { display: none; }
 
 .dock { border-top: 1px solid var(--line); background: var(--surface); padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); display: grid; gap: 8px; }
+.live:empty { display: none; }
 .live { min-height: 1.6em; color: var(--muted); font-size: 14px; }
-.live.hearing { color: var(--text); }
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.mic {
   display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
   border: 1.5px solid var(--line); background: var(--surface); font-weight: 600;
 }
-.mic .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
-.mic[aria-pressed="true"] { border-color: var(--rec); }
-.mic[aria-pressed="true"] .dot { background: var(--rec); }
-.mic.listening .dot { animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
 .compose { display: flex; gap: 8px; }
-.compose input { flex: 1; min-width: 0; font-size: 16px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: var(--bg); }
+.compose { align-items: flex-end; }
+.compose textarea { flex: 1; min-width: 0; font-size: 16px; line-height: 1.5; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: var(--bg); resize: none; max-height: 180px; overflow-y: auto; }
+.compose button { padding: 10px 16px; }
+.controls .ghost { flex: 1; }
 
 /* ---------- Record ---------- */
 .q-block { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; background: var(--bg); }
