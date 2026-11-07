@@ -209,7 +209,16 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .pair { margin: 6px 0; }
 .pair .ja { color: var(--muted); font-size: calc(13.5px * var(--fs)); }
 .pair .en { font-weight: 500; }
+.en-chip {
+  align-self: flex-start; max-width: 92%; display: grid; gap: 2px; text-align: left;
+  border: 1.5px solid var(--accent); background: var(--surface); color: var(--text);
+  border-radius: 12px; padding: 8px 12px; margin-top: -4px;
+}
+.en-chip .chip-label { font-size: calc(11.5px * var(--fs)); color: var(--accent); font-weight: 600; }
+.en-chip .chip-text { font-size: calc(16px * var(--fs)); font-weight: 600; line-height: 1.5; }
+.speak.playing { background: var(--user); outline: 2px solid var(--accent); }
 .speak { cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
+.en-chip.speak { text-decoration: none; }
 
 /* ---------- Settings ---------- */
 dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); max-width: min(480px, calc(100vw - 32px)); }
