@@ -10,7 +10,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 
 // ---------------------------------------------------------------- settings
 // ttsMode: "answer" = 確定した推奨英文のみ / "all" = 応答をすべて / "off" = 読み上げなし
-const DEFAULTS = { fontSize: "auto", ttsMode: "answer", rate: 1.0, voiceJa: "", voiceEn: "" };
+const DEFAULTS = { repeat: 3, fontSize: "auto", ttsMode: "answer", rate: 1.0, voiceJa: "", voiceEn: "" };
 const settings = (() => {
   try {
     return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("settings") || "{}") };
@@ -166,9 +166,42 @@ class Speaker {
     this.gen = 0;
     this.onIdle = null;
     this.onChange = null;
+    this.loopEl = null;
   }
   get speaking() {
-    return this.pending > 0;
+    return this.pending > 0 || !!this.loopEl;
+  }
+  // 1つの英文を times 回(0 = 止めるまで)くり返し読み上げる。el はハイライトする要素。
+  repeat(text, times, el) {
+    this.reset();
+    const clean = cleanForSpeech(text);
+    if (!clean || !window.speechSynthesis) return this.hush();
+    const g = this.gen;
+    this.loopEl = el || document.body;
+    el?.classList.add("playing");
+    this.onChange?.();
+    let n = 0;
+    const next = () => {
+      if (g !== this.gen) return;
+      if (times > 0 && n >= times) return this.hush();
+      n++;
+      const u = this.utterance(clean);
+      u.onend = u.onerror = () => {
+        if (g !== this.gen) return;
+        setTimeout(next, 900); // くり返しの間に少し間を置く(後について言う時間)
+      };
+      speechSynthesis.speak(u);
+    };
+    next();
+  }
+  utterance(clean) {
+    const u = new SpeechSynthesisUtterance(clean);
+    const ja = hasJa(clean);
+    u.lang = ja ? "ja-JP" : "en-US";
+    const v = pickVoice(ja ? "ja" : "en");
+    if (v) u.voice = v;
+    u.rate = settings.rate;
+    return u;
   }
   reset() {
     this.cancel();
@@ -198,12 +231,7 @@ class Speaker {
   say(t) {
     const clean = cleanForSpeech(t);
     if (!clean || !/[\p{L}\p{N}]/u.test(clean)) return;
-    const u = new SpeechSynthesisUtterance(clean);
-    const ja = hasJa(clean);
-    u.lang = ja ? "ja-JP" : "en-US";
-    const v = pickVoice(ja ? "ja" : "en");
-    if (v) u.voice = v;
-    u.rate = settings.rate;
+    const u = this.utterance(clean);
     const g = this.gen;
     this.pending++;
     this.onChange?.();
@@ -218,6 +246,8 @@ class Speaker {
   cancel() {
     this.gen++;
     this.pending = 0;
+    this.loopEl?.classList.remove("playing");
+    this.loopEl = null;
     if (window.speechSynthesis) speechSynthesis.cancel();
     this.onChange?.();
   }
@@ -255,6 +285,17 @@ function addSayButton(bubble) {
   };
   bubble.prepend(b);
 }
+// 推奨英文(確定英文)をタップで聞ける形で会話欄に表示する
+function addSentenceChip(afterEl, text, label = "推奨英文") {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "en-chip speak";
+  chip.dataset.text = text;
+  chip.innerHTML = `<span class="chip-label">${escapeHtml(label)}・タップでくり返し再生</span><span class="chip-text">${escapeHtml(text)}</span>`;
+  afterEl.after(chip);
+  return chip;
+}
+
 function setBubbleText(bubble, text) {
   bubble.dataset.text = text;
   const btn = bubble.querySelector(".say");
@@ -268,6 +309,7 @@ function setStatus() {
   if (isBusy()) msg = state.turn.full ? "応答中…" : "考え中…";
   else if (speaker.speaking) msg = "読み上げ中";
   $("#live").textContent = msg;
+  $("#btn-hush").hidden = !speaker.speaking;
 }
 speaker.onChange = setStatus;
 speaker.onIdle = setStatus;
@@ -451,6 +493,9 @@ function finishTurn(turn) {
   if (state.turn === turn) {
     applyMetaUI(turn.meta);
     const answer = turn.meta?.accepted?.en;
+    let anchor = turn.bubble;
+    if (answer) anchor = addSentenceChip(anchor, answer);
+    if (turn.meta?.final_en) addSentenceChip(anchor, turn.meta.final_en, "完成版");
     if (settings.ttsMode === "all") speaker.feed(visiblePart(turn.full), true);
     else if (settings.ttsMode === "answer" && answer) {
       // 推奨される英文(確定英文)だけを英語で読み上げる
@@ -747,6 +792,7 @@ function bindSettings() {
   $("#btn-settings").onclick = () => {
     $("#set-ttsmode").value = settings.ttsMode;
     $("#set-fontsize").value = settings.fontSize;
+    $("#set-repeat").value = String(settings.repeat);
     $("#set-rate").value = settings.rate;
     $("#out-rate").textContent = settings.rate;
     loadVoices();
@@ -756,6 +802,7 @@ function bindSettings() {
   dlg.addEventListener("close", () => {
     settings.ttsMode = $("#set-ttsmode").value;
     settings.fontSize = $("#set-fontsize").value;
+    settings.repeat = Number($("#set-repeat").value);
     applyFontSize();
     settings.rate = Number($("#set-rate").value);
     settings.voiceJa = $("#set-voice-ja").value;
@@ -798,12 +845,15 @@ function bind() {
   $("#btn-hint").onclick = () => submitUser("ヒント");
   $("#btn-hush").onclick = () => speaker.hush();
   $("#btn-export").onclick = exportMarkdown;
-  $("#record").addEventListener("click", (e) => {
+  // 英文をタップ → くり返し読み上げ。読み上げ中の英文をもう一度タップすると止める。
+  const onSpeakTap = (e) => {
     const el = e.target.closest(".speak");
     if (!el) return;
-    speaker.reset();
-    speaker.feed(el.textContent, true);
-  });
+    if (speaker.loopEl === el) return speaker.hush();
+    speaker.repeat(el.dataset.text || el.textContent, Number(settings.repeat) || 0, el);
+  };
+  $("#record").addEventListener("click", onSpeakTap);
+  $("#log").addEventListener("click", onSpeakTap);
   const input = $("#input");
   const autoGrow = () => {
     input.style.height = "auto";
