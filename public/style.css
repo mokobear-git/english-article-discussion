@@ -12,6 +12,7 @@
   --warn: #a5452b;
   --rec: #c4372a;
   --radius: 12px;
+  --fs: 1; /* 文字サイズの倍率(設定で変更) */
   --font: system-ui, -apple-system, "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -112,6 +113,12 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .prose h2 { font-size: 16px; margin: 1.4em 0 .4em; }
 .prose h3 { font-size: 15px; margin: 1.2em 0 .3em; }
 .prose p { margin: 0 0 .9em; }
+.prose { font-size: calc(15px * var(--fs)); line-height: 1.8; }
+.prose h2 { font-size: calc(16px * var(--fs)) !important; }
+.prose h3 { font-size: calc(15px * var(--fs)) !important; }
+.choices button { font-size: calc(15px * var(--fs)); line-height: 1.5; }
+.live { font-size: calc(14px * var(--fs)) !important; }
+.compose input { font-size: max(16px, calc(15px * var(--fs))) !important; }
 .prose .cursor::after { content: "▍"; color: var(--accent); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 
@@ -156,10 +163,10 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 
 /* ---------- Chat ---------- */
 .chat { background: var(--bg); }
-.progress { padding: 8px 16px; font-size: 13px; color: var(--muted); border-bottom: 1px solid var(--line); min-height: 38px; }
+.progress { padding: 8px 16px; font-size: calc(13px * var(--fs)); color: var(--muted); border-bottom: 1px solid var(--line); min-height: 38px; }
 .progress b { color: var(--text); }
 .log { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.msg { max-width: 92%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; }
+.msg { max-width: 92%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; word-break: break-word; font-size: calc(15px * var(--fs)); line-height: 1.75; }
 .msg.assistant { background: var(--surface); border: 1px solid var(--line); align-self: flex-start; }
 .msg.user { background: var(--user); align-self: flex-end; }
 .msg.user.draft { opacity: .7; border: 1px dashed var(--accent); }
@@ -170,7 +177,8 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 
 .target { margin: 0 16px 8px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1.5px solid var(--accent); }
 .target-label { font-size: 12px; color: var(--accent); font-weight: 600; }
-.target-text { font-size: 16px; }
+.target-text { font-size: calc(17px * var(--fs)); line-height: 1.6; }
+.target-label { font-size: calc(12px * var(--fs)) !important; }
 
 .choices { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 8px; }
 .choices button {
@@ -199,7 +207,7 @@ textarea { width: 100%; border: 1px solid var(--line); border-radius: 10px; padd
 .q-block { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; background: var(--bg); }
 .q-block h3 { margin: 0 0 6px; }
 .pair { margin: 6px 0; }
-.pair .ja { color: var(--muted); font-size: 13.5px; }
+.pair .ja { color: var(--muted); font-size: calc(13.5px * var(--fs)); }
 .pair .en { font-weight: 500; }
 .speak { cursor: pointer; text-decoration: underline dotted var(--muted); text-underline-offset: 3px; }
 

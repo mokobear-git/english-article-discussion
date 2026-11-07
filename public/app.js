@@ -10,7 +10,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 
 // ---------------------------------------------------------------- settings
 // ttsMode: "answer" = 確定した推奨英文のみ / "all" = 応答をすべて / "off" = 読み上げなし
-const DEFAULTS = { ttsMode: "answer", rate: 1.0, silenceMs: 1100, bargeIn: false, autoLang: true, voiceJa: "", voiceEn: "" };
+const DEFAULTS = { fontSize: "auto", ttsMode: "answer", rate: 1.0, silenceMs: 1100, bargeIn: false, autoLang: true, voiceJa: "", voiceEn: "" };
 const settings = (() => {
   try {
     return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("settings") || "{}") };
@@ -931,6 +931,7 @@ function bindSettings() {
   const dlg = $("#settings");
   $("#btn-settings").onclick = () => {
     $("#set-ttsmode").value = settings.ttsMode;
+    $("#set-fontsize").value = settings.fontSize;
     $("#set-rate").value = settings.rate;
     $("#out-rate").textContent = settings.rate;
     $("#set-silence").value = settings.silenceMs;
@@ -942,6 +943,8 @@ function bindSettings() {
   $("#set-rate").oninput = (e) => ($("#out-rate").textContent = e.target.value);
   dlg.addEventListener("close", () => {
     settings.ttsMode = $("#set-ttsmode").value;
+    settings.fontSize = $("#set-fontsize").value;
+    applyFontSize();
     settings.rate = Number($("#set-rate").value);
     settings.silenceMs = Math.max(400, Number($("#set-silence").value) || DEFAULTS.silenceMs);
     settings.bargeIn = $("#set-bargein").checked;
@@ -1021,7 +1024,15 @@ function bind() {
   loadVoices();
 }
 
+// 文字サイズ: 自動ではスマホ幅で1.25倍
+function applyFontSize() {
+  const v = settings.fontSize === "auto" ? (matchMedia("(max-width: 600px)").matches ? 1.25 : 1) : Number(settings.fontSize) || 1;
+  document.documentElement.style.setProperty("--fs", String(v));
+}
+
 async function init() {
+  applyFontSize();
+  matchMedia("(max-width: 600px)").addEventListener?.("change", applyFontSize);
   bind();
   setStatus();
   renderRecord();
