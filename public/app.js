@@ -10,7 +10,7 @@ const $$ = (s) => [...document.querySelectorAll(s)];
 
 // ---------------------------------------------------------------- settings
 // ttsMode: "answer" = 確定した推奨英文のみ / "all" = 応答をすべて / "off" = 読み上げなし
-const DEFAULTS = { fontSize: "auto", ttsMode: "answer", rate: 1.0, silenceMs: 1100, bargeIn: false, autoLang: true, voiceJa: "", voiceEn: "" };
+const DEFAULTS = { fontSize: "auto", ttsMode: "answer", rate: 1.0, voiceJa: "", voiceEn: "" };
 const settings = (() => {
   try {
     return { ...DEFAULTS, ...JSON.parse(localStorage.getItem("settings") || "{}") };
@@ -232,122 +232,6 @@ class Speaker {
 }
 const speaker = new Speaker();
 
-// ---------------------------------------------------------------- Listener (STT)
-class Listener {
-  constructor() {
-    this.SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    this.want = false;
-    this.rec = null;
-    this.running = false;
-    this.lang = "ja-JP";
-    this.finalText = "";
-    this.interim = "";
-    this.timer = null;
-    this.onText = () => {};
-    this.onSubmit = () => {};
-    this.onState = () => {};
-    this.onError = () => {};
-  }
-  get supported() {
-    return !!this.SR;
-  }
-  start(lang) {
-    if (!this.supported) return;
-    if (lang && lang !== this.lang) {
-      this.lang = lang;
-      this.kill();
-    }
-    this.want = true;
-    this.spawn();
-  }
-  stop() {
-    this.want = false;
-    this.kill();
-  }
-  setLang(lang) {
-    if (lang === this.lang) return;
-    this.lang = lang;
-    if (this.want) {
-      this.kill();
-      this.spawn();
-    }
-  }
-  spawn() {
-    if (this.rec || !this.want) return;
-    const r = new this.SR();
-    r.lang = this.lang;
-    r.continuous = true;
-    r.interimResults = true;
-    r.maxAlternatives = 1;
-    r.onstart = () => {
-      this.running = true;
-      this.onState();
-    };
-    r.onresult = (e) => {
-      let interim = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const res = e.results[i];
-        if (res.isFinal) this.finalText += res[0].transcript;
-        else interim += res[0].transcript;
-      }
-      this.interim = interim;
-      const t = (this.finalText + interim).trim();
-      if (t) this.onText(t);
-      this.arm();
-    };
-    r.onerror = (e) => {
-      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
-        this.want = false;
-        this.onError("マイクの使用が許可されていない。ブラウザの設定を確認。");
-      } else if (e.error === "audio-capture") {
-        this.onError("マイクが見つからない。");
-      }
-    };
-    r.onend = () => {
-      if (this.rec === r) {
-        this.rec = null;
-        this.running = false;
-        this.onState();
-      }
-      if (this.want) setTimeout(() => this.spawn(), 100); // Chrome ends sessions on its own
-    };
-    this.rec = r;
-    try {
-      r.start();
-    } catch {
-      this.rec = null;
-    }
-  }
-  kill() {
-    clearTimeout(this.timer);
-    const r = this.rec;
-    this.rec = null;
-    this.running = false;
-    if (r) {
-      r.onend = r.onresult = r.onerror = null;
-      try {
-        r.abort();
-      } catch {}
-    }
-    this.finalText = "";
-    this.interim = "";
-    this.onState();
-  }
-  // Submit after a short silence (no new result for silenceMs).
-  arm() {
-    clearTimeout(this.timer);
-    this.timer = setTimeout(() => {
-      const t = (this.finalText + this.interim).trim();
-      if (!t) return;
-      this.kill(); // drop recogniser buffer, start fresh for next utterance
-      this.onSubmit(t);
-      if (this.want) this.spawn();
-    }, settings.silenceMs);
-  }
-}
-const listener = new Listener();
-const langCode = (l) => (l === "en" ? "en-US" : "ja-JP");
-
 // ---------------------------------------------------------------- DOM helpers
 const log = $("#log");
 function scrollLog() {
@@ -378,97 +262,29 @@ function setBubbleText(bubble, text) {
   if (btn) bubble.prepend(btn);
 }
 
-let draft = null;
-function showDraft(text) {
-  if (!draft) draft = addBubble("user", "", "draft");
-  draft.textContent = text;
-  scrollLog();
-}
-function clearDraft() {
-  draft?.remove();
-  draft = null;
-}
-
 function setStatus() {
-  const mic = $("#btn-mic");
-  mic.setAttribute("aria-pressed", String(state.conv));
-  mic.classList.toggle("listening", listener.running);
-  $("#mic-label").textContent = state.conv ? (listener.running ? "聞き取り中" : "会話 ON") : "会話";
   $("#go-bar").hidden = state.started || document.body.dataset.view !== "study";
-  const live = $("#live");
   let msg = "";
   if (isBusy()) msg = state.turn.full ? "応答中…" : "考え中…";
-  else if (speaker.speaking) msg = settings.bargeIn ? "読み上げ中(話すと止まる)" : "読み上げ中";
-  else if (state.conv && listener.running) msg = `聞き取り中(${state.lang === "en" ? "English" : "日本語"})…`;
-  else if (state.conv) msg = "待機中";
-  else msg = listener.supported ? "会話モードをONにすると音声で回答できる" : "このブラウザは音声認識に非対応。Chrome / Edge / Safari を推奨。";
-  live.textContent = msg;
-  live.classList.toggle("hearing", state.conv && listener.running);
+  else if (speaker.speaking) msg = "読み上げ中";
+  $("#live").textContent = msg;
 }
 speaker.onChange = setStatus;
-listener.onState = setStatus;
+speaker.onIdle = setStatus;
 
-function setLang(l) {
-  state.lang = l;
-  $$("#lang-seg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === l));
-  listener.setLang(langCode(l));
-  setStatus();
+// 入力欄の言語ヒント(英訳時は英語)。スマホの音声入力はキーボードの言語に従う。
+function setInputLang(expect) {
+  const en = expect === "en";
+  const el = $("#input");
+  el.lang = en ? "en" : "ja";
+  el.setAttribute("autocapitalize", en ? "sentences" : "off");
+  el.placeholder = el.disabled ? el.placeholder : en ? "英文を入力(音声入力も可)" : "入力(音声入力も可)";
 }
 
-// ---------------------------------------------------------------- screen wake lock (phones)
-let wakeLock = null;
-async function updateWakeLock() {
-  try {
-    if (state.conv && document.visibilityState === "visible" && "wakeLock" in navigator) {
-      if (!wakeLock) {
-        wakeLock = await navigator.wakeLock.request("screen");
-        wakeLock.addEventListener("release", () => (wakeLock = null));
-      }
-    } else if (wakeLock) {
-      await wakeLock.release();
-      wakeLock = null;
-    }
-  } catch {
-    wakeLock = null;
-  }
-}
+// 画面を離れたら読み上げを止める
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") {
-    listener.stop();
-    speaker.hush();
-  } else {
-    resumeListening();
-  }
-  updateWakeLock();
+  if (document.visibilityState === "hidden") speaker.hush();
 });
-
-// ---------------------------------------------------------------- listening control
-function resumeListening() {
-  if (!state.conv || !listener.supported || !state.started) return;
-  if (isBusy() || (speaker.speaking && !settings.bargeIn)) return;
-  listener.start(langCode(state.lang));
-}
-function pauseListening() {
-  if (settings.bargeIn) return;
-  listener.stop();
-}
-speaker.onIdle = () => {
-  setStatus();
-  resumeListening();
-};
-
-listener.onText = (t) => {
-  if (!state.started) return;
-  if (speaker.speaking && settings.bargeIn) speaker.hush();
-  showDraft(t);
-};
-listener.onSubmit = (t) => submitUser(t, { fromVoice: true });
-listener.onError = (m) => {
-  state.conv = false;
-  updateWakeLock();
-  addBubble("assistant", m, "error");
-  setStatus();
-};
 
 // ---------------------------------------------------------------- meta → UI
 const PHASE_LABEL = {
@@ -491,7 +307,14 @@ function applyMetaUI(meta) {
   if (!isBusy()) {
     for (const c of m.choices || []) {
       const b = document.createElement("button");
-      b.textContent = c;
+      // "A. 〜" 形式なら、スマホでは記号(A)だけを表示する。送信は全文。
+      const key = String(c).match(/^\s*([A-HＡ-Ｈ])\s*[.．、:：)）]/)?.[1];
+      if (key) {
+        b.classList.add("keyed");
+        b.innerHTML = `<span class="c-full">${escapeHtml(c)}</span><span class="c-key">${escapeHtml(key)}</span>`;
+        b.setAttribute("aria-label", c);
+        b.title = c;
+      } else b.textContent = c;
       b.onclick = () => submitUser(c);
       box.appendChild(b);
     }
@@ -503,7 +326,7 @@ function applyMetaUI(meta) {
     $("#target-progress").textContent = m.progress || "";
   } else target.hidden = true;
 
-  if (meta && settings.autoLang && meta.expect) setLang(meta.expect === "en" ? "en" : "ja");
+  if (meta) setInputLang(meta.expect);
 }
 
 function renderRecord() {
@@ -633,7 +456,7 @@ function finishTurn(turn) {
       // 推奨される英文(確定英文)だけを英語で読み上げる
       speaker.reset();
       speaker.feed(answer, true);
-    } else speaker.feed("", true); // 読み上げなし → すぐ聞き取りへ
+    } else speaker.feed("", true); // 読み上げなし
   }
   scrollLog();
   setStatus();
@@ -654,7 +477,7 @@ function revealStartTurn() {
   setStatus();
 }
 
-function submitUser(text, { fromVoice = false } = {}) {
+function submitUser(text) {
   text = String(text || "").trim();
   if (!text || !state.started) return;
   // Barge-in: abort the running turn (server keeps the partial reply).
@@ -663,22 +486,14 @@ function submitUser(text, { fromVoice = false } = {}) {
     state.turn.ctrl.abort();
   }
   speaker.cancel();
-  if (draft && fromVoice) {
-    draft.classList.remove("draft");
-    draft.textContent = text;
-    draft = null;
-  } else {
-    clearDraft();
-    addBubble("user", text);
-  }
+  addBubble("user", text);
   $("#choices").innerHTML = "";
-  pauseListening();
   beginTurn({ text });
 }
 
 function setComposeEnabled(on) {
   $("#input").disabled = !on;
-  $("#input").placeholder = on ? "入力して Enter(音声も可)" : "「設問へ進む」を押すと入力できる";
+  $("#input").placeholder = on ? "入力(音声入力も可)" : "「設問へ進む」を押すと入力できる";
   $("#compose button").disabled = !on;
   $("#btn-hint").disabled = !on;
 }
@@ -934,9 +749,6 @@ function bindSettings() {
     $("#set-fontsize").value = settings.fontSize;
     $("#set-rate").value = settings.rate;
     $("#out-rate").textContent = settings.rate;
-    $("#set-silence").value = settings.silenceMs;
-    $("#set-bargein").checked = settings.bargeIn;
-    $("#set-autolang").checked = settings.autoLang;
     loadVoices();
     dlg.showModal();
   };
@@ -946,9 +758,6 @@ function bindSettings() {
     settings.fontSize = $("#set-fontsize").value;
     applyFontSize();
     settings.rate = Number($("#set-rate").value);
-    settings.silenceMs = Math.max(400, Number($("#set-silence").value) || DEFAULTS.silenceMs);
-    settings.bargeIn = $("#set-bargein").checked;
-    settings.autoLang = $("#set-autolang").checked;
     settings.voiceJa = $("#set-voice-ja").value;
     settings.voiceEn = $("#set-voice-en").value;
     saveSettings();
@@ -972,8 +781,6 @@ function bind() {
     try {
       speechSynthesis.speak(new SpeechSynthesisUtterance(""));
     } catch {}
-    if (listener.supported) state.conv = true; // 会話モードで開始
-    updateWakeLock();
     revealStartTurn();
     setTab("chat");
   };
@@ -988,20 +795,6 @@ function bind() {
         runTranslation(b.dataset.mode);
       }),
   );
-  $$("#lang-seg button").forEach((b) => (b.onclick = () => setLang(b.dataset.lang)));
-  $("#btn-mic").onclick = () => {
-    if (!listener.supported) return alert("このブラウザは音声認識に非対応。Chrome / Edge / Safari を推奨。");
-    state.conv = !state.conv;
-    if (state.conv) {
-      if (speaker.speaking && !settings.bargeIn) speaker.hush();
-      listener.start(langCode(state.lang));
-    } else {
-      listener.stop();
-      clearDraft();
-    }
-    updateWakeLock();
-    setStatus();
-  };
   $("#btn-hint").onclick = () => submitUser("ヒント");
   $("#btn-hush").onclick = () => speaker.hush();
   $("#btn-export").onclick = exportMarkdown;
@@ -1011,12 +804,30 @@ function bind() {
     speaker.reset();
     speaker.feed(el.textContent, true);
   });
-  $("#compose").onsubmit = (e) => {
-    e.preventDefault();
-    const v = $("#input").value;
-    $("#input").value = "";
+  const input = $("#input");
+  const autoGrow = () => {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 180) + "px";
+  };
+  const send = () => {
+    const v = input.value;
+    if (!v.trim()) return;
+    input.value = "";
+    autoGrow();
     submitUser(v);
   };
+  $("#compose").onsubmit = (e) => {
+    e.preventDefault();
+    send();
+  };
+  input.addEventListener("input", autoGrow);
+  // Enter で送信、Shift+Enter で改行。日本語変換の確定中(isComposing)は送信しない。
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault();
+      send();
+    }
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") speaker.hush();
   });
@@ -1042,7 +853,6 @@ async function init() {
       $("#status").textContent = `${c.model}${c.mock ? "(モック)" : ""}${c.fast ? " fast" : ""}`;
     })
     .catch(() => {});
-  if (!listener.supported) $("#env-note").textContent = "注: このブラウザは音声認識に非対応。Chrome / Edge / Safari を推奨。テキスト入力は可能。";
   const id = store.get("sessionId");
   if (id && (await restore(id).catch(() => false))) return;
   store.set("sessionId", null);

@@ -58,7 +58,6 @@
       <p class="muted small">新聞記事など著作権のある文章は、全文訳の代わりに要約になることがある。</p>
     </section>
     <button class="primary big" id="btn-start">開始</button>
-    <p class="muted small" id="env-note"></p>
   </main>
 
   <!-- ===== Study ===== -->
@@ -109,21 +108,14 @@
 
       <div class="dock">
         <div class="live" id="live" aria-live="polite"></div>
-        <div class="controls">
-          <button class="mic" id="btn-mic" aria-pressed="false" title="会話モード">
-            <span class="dot"></span><span id="mic-label">会話</span>
-          </button>
-          <div class="seg lang" id="lang-seg">
-            <button data-lang="ja" class="on"><span class="long">日本語</span><span class="short">日</span></button>
-            <button data-lang="en"><span class="long">English</span><span class="short">EN</span></button>
-          </div>
-          <button class="ghost" id="btn-hint">ヒント</button>
-          <button class="ghost" id="btn-hush" title="読み上げ停止">停止</button>
-        </div>
         <form class="compose" id="compose">
-          <input id="input" autocomplete="off" placeholder="入力して Enter(音声も可)">
+          <textarea id="input" rows="1" autocomplete="off" placeholder="入力(音声入力も可)"></textarea>
           <button class="primary" type="submit">送信</button>
         </form>
+        <div class="controls">
+          <button class="ghost" id="btn-hint">ヒント</button>
+          <button class="ghost" id="btn-hush" title="読み上げ停止">読み上げ停止</button>
+        </div>
       </div>
     </section>
   </main>
@@ -151,9 +143,6 @@
       <label>読み上げ速度 <input type="range" id="set-rate" min="0.8" max="1.8" step="0.1"><output id="out-rate"></output></label>
       <label>日本語の声 <select id="set-voice-ja"></select></label>
       <label>英語の声 <select id="set-voice-en"></select></label>
-      <label>無音で送信するまで(ms) <input type="number" id="set-silence" min="400" max="4000" step="100"></label>
-      <label><input type="checkbox" id="set-bargein"> 読み上げ中も聞き取る(ヘッドホン推奨。話すと読み上げを止める)</label>
-      <label><input type="checkbox" id="set-autolang"> 入力言語を自動切替(英訳時は English)</label>
       <menu><button class="primary" value="ok">閉じる</button></menu>
     </form>
   </dialog>
